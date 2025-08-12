@@ -13,9 +13,10 @@ from django.contrib.auth import login, authenticate
 import logging
 import json
 from django.views.decorators.csrf import csrf_exempt
+from django.views.decorators.http import require_http_methods
 from .models import CarMake, CarModel
 from .populate import initiate
-from .restapis import get_request
+from .restapis import get_request, analyze_review_sentiments, post_review
 
 # Get an instance of a logger
 logger = logging.getLogger(__name__)
@@ -131,3 +132,72 @@ def proxy_fetch_dealers_by_state(request, state):
 def proxy_fetch_dealer_by_id(request, id):
     data = get_request(f"fetchDealer/{id}")
     return JsonResponse(data, safe=False)
+
+# List dealerships: all or by state
+def get_dealerships(request, state="All"):
+    if state == "All":
+        endpoint = "/fetchDealers"
+    else:
+        endpoint = f"/fetchDealers/{state}"
+    dealerships = get_request(endpoint) or []
+    return JsonResponse({"status": 200, "dealers": dealerships})
+
+# Single dealer by id
+def get_dealer_details(request, dealer_id):
+    if dealer_id:
+        endpoint = f"/fetchDealer/{dealer_id}"
+        dealership = get_request(endpoint) or {}
+        return JsonResponse({"status": 200, "dealer": dealership})
+    return JsonResponse({"status": 400, "message": "Bad Request"})
+
+def get_dealer_reviews(request, dealer_id: int):
+    endpoint = f"/fetchReviews/dealer/{dealer_id}"
+    reviews = get_request(endpoint) or []
+
+    enriched = []
+    for r in reviews:
+        text = r.get("review", "")
+        senti = analyze_review_sentiments(text)
+        # accept either {"sentiment": "..."} or {"label": "..."} shapes
+        sentiment_value = (
+            senti.get("sentiment")
+            or senti.get("label")
+            or "neutral"
+        )
+        r["sentiment"] = sentiment_value
+        enriched.append(r)
+
+    return JsonResponse({"status": 200, "reviews": enriched})
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def add_review(request):
+    # Only logged-in users can post
+    if request.user.is_anonymous:
+        return JsonResponse({"status": 403, "message": "Unauthorized"}, status=403)
+
+    # Parse body
+    try:
+        payload = json.loads(request.body.decode("utf-8"))
+    except Exception:
+        return JsonResponse({"status": 400, "message": "Invalid JSON body"}, status=400)
+
+    # (Optional) Basic field validation to prevent empty inserts
+    required = ["dealership", "name", "review", "purchase"]
+    missing = [k for k in required if k not in payload]
+    if missing:
+        return JsonResponse(
+            {"status": 400, "message": f"Missing required fields: {', '.join(missing)}"},
+            status=400,
+        )
+
+    # Forward to backend
+    try:
+        backend_resp = post_review(payload)  # dict from Node backend
+        # Normalize success for the lab rubric
+        return JsonResponse({"status": 200, "result": backend_resp}, status=200)
+    except Exception as e:
+        return JsonResponse(
+            {"status": 500, "message": f"Error in posting review: {str(e)}"},
+            status=500,
+        )

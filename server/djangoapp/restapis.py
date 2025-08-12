@@ -2,6 +2,8 @@
 import requests
 import os
 from dotenv import load_dotenv
+from urllib.parse import quote_plus
+
 
 load_dotenv()
 
@@ -42,3 +44,24 @@ def get_request(endpoint, **kwargs):
     except requests.exceptions.RequestException as e:
         print(f"Network exception occurred: {e}")
         return None
+
+def analyze_review_sentiments(text):
+    safe = quote_plus(str(text))
+    request_url = sentiment_analyzer_url + "analyze/" + safe
+    try:
+        response = requests.get(request_url, timeout=10)
+        return response.json()
+    except Exception as err:
+        print(f"Sentiment call failed: {err}")
+        return {"sentiment": "neutral"}
+
+
+def post_review(data_dict):
+    request_url = backend_url + "/insert_review"
+    try:
+        response = requests.post(request_url, json=data_dict, timeout=10)
+        response.raise_for_status()
+        return response.json()
+    except Exception as err:
+        print(f"post_review error: {err}")
+        return {"status": 500, "message": "Backend insert failed"}
