@@ -15,6 +15,7 @@ import json
 from django.views.decorators.csrf import csrf_exempt
 from .models import CarMake, CarModel
 from .populate import initiate
+from .restapis import get_request
 
 # Get an instance of a logger
 logger = logging.getLogger(__name__)
@@ -109,3 +110,24 @@ def get_cars(request):
 # Create a `add_review` view to submit a review
 # def add_review(request):
 # ...
+
+def proxy_fetch_reviews(request):
+    # all reviews
+    data = get_request("fetchReviews")
+    return JsonResponse(data, safe=False)
+
+def proxy_fetch_reviews_by_dealer(request, id):
+    data = get_request(f"fetchReviews/dealer/{id}")
+    return JsonResponse(data, safe=False)
+
+def proxy_fetch_dealers(request):
+    data = get_request("fetchDealers")
+    return JsonResponse(data, safe=False)
+
+def proxy_fetch_dealers_by_state(request, state):
+    data = get_request(f"fetchDealers/{state}")
+    return JsonResponse(data, safe=False)
+
+def proxy_fetch_dealer_by_id(request, id):
+    data = get_request(f"fetchDealer/{id}")
+    return JsonResponse(data, safe=False)

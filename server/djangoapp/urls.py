@@ -13,6 +13,12 @@ urlpatterns = [
     path('logout', views.logout_user, name='logout'),
     path("register", views.registration, name="register"),
     path('get_cars', views.get_cars, name='getcars'),
+    path('fetchReviews', views.proxy_fetch_reviews),
+    path('fetchReviews/dealer/<int:id>', views.proxy_fetch_reviews_by_dealer),
+
+    path('fetchDealers', views.proxy_fetch_dealers),
+    path('fetchDealers/<str:state>', views.proxy_fetch_dealers_by_state),
+    path('fetchDealer/<int:id>', views.proxy_fetch_dealer_by_id),
 
     # path for dealer reviews view
 
