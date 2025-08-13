@@ -26,6 +26,7 @@ urlpatterns = [
     path('fetchDealer/<int:id>', views.proxy_fetch_dealer_by_id),
 
     # Dealers (proxy via Django views)
+    path(route='get_dealers/', view=views.get_dealerships, name='get_dealers'),
     path('get_dealers', views.get_dealerships, name='get_dealers'),
     path('get_dealers/<str:state>', views.get_dealerships, name='get_dealers_by_state'),
 
