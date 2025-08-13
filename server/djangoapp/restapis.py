@@ -1,67 +1,57 @@
-# Uncomment the imports below before you add the function code
-import requests
+# restapis.py
 import os
-from dotenv import load_dotenv
+import requests
 from urllib.parse import quote_plus
-
+from dotenv import load_dotenv
 
 load_dotenv()
 
-backend_url = os.getenv(
-    'backend_url', default="http://localhost:3030")
+# lower-case keys as per your project
+backend_url = os.getenv("backend_url", "http://localhost:3000").rstrip("/")
 sentiment_analyzer_url = os.getenv(
-    'sentiment_analyzer_url',
-    default="http://localhost:5050/")
+    "sentiment_analyzer_url", "http://localhost:5050/"
+).rstrip("/") + "/"
 
-# def get_request(endpoint, **kwargs):
-# Add code for get requests to back end
-
-# def analyze_review_sentiments(text):
-# request_url = sentiment_analyzer_url+"analyze/"+text
-# Add code for retrieving sentiments
-
-# def post_review(data_dict):
-# Add code for posting review
-def get_request(endpoint, **kwargs):
-    # Ensure no duplicate slashes
-    endpoint = endpoint.lstrip('/')
-    base_url = backend_url.rstrip('/')
-    
-    # Build full request URL
-    request_url = f"{base_url}/{endpoint}"
-    
-    # Append query params if provided
-    if kwargs:
-        from urllib.parse import urlencode
-        request_url += "?" + urlencode(kwargs)
-    
-    print(f"GET from {request_url}")
-    
+def get_request(endpoint: str, **kwargs):
+    """
+    Simple GET wrapper to your Node backend.
+    Returns [] on failure so templates don't break.
+    """
     try:
-        response = requests.get(request_url, timeout=10)
-        response.raise_for_status()  # Raises HTTPError if not 200
-        return response.json()
-    except requests.exceptions.RequestException as e:
+        endpoint = str(endpoint).lstrip("/")
+        url = f"{backend_url}/{endpoint}"
+        print(f"GET from {url}")
+        resp = requests.get(url, params=kwargs or None, timeout=10)
+        resp.raise_for_status()
+        return resp.json()
+    except Exception as e:
         print(f"Network exception occurred: {e}")
-        return None
+        return []  # Django views expect iterable/JSON
 
-def analyze_review_sentiments(text):
-    safe = quote_plus(str(text))
-    request_url = sentiment_analyzer_url + "analyze/" + safe
+def analyze_review_sentiments(text: str):
+    """
+    Calls the sentiment analyzer service.
+    Returns {'sentiment': 'neutral'} on failure.
+    """
     try:
-        response = requests.get(request_url, timeout=10)
-        return response.json()
-    except Exception as err:
-        print(f"Sentiment call failed: {err}")
+        safe = quote_plus(str(text or ""))
+        url = sentiment_analyzer_url + "analyze/" + safe
+        resp = requests.get(url, timeout=10)
+        resp.raise_for_status()
+        return resp.json()
+    except Exception as e:
+        print(f"Sentiment call failed: {e}")
         return {"sentiment": "neutral"}
 
-
-def post_review(data_dict):
-    request_url = backend_url + "/insert_review"
+def post_review(data_dict: dict):
+    """
+    Posts a review to the Node backend.
+    """
     try:
-        response = requests.post(request_url, json=data_dict, timeout=10)
-        response.raise_for_status()
-        return response.json()
-    except Exception as err:
-        print(f"post_review error: {err}")
+        url = backend_url + "/insert_review"
+        resp = requests.post(url, json=data_dict, timeout=10)
+        resp.raise_for_status()
+        return resp.json()
+    except Exception as e:
+        print(f"post_review error: {e}")
         return {"status": 500, "message": "Backend insert failed"}
