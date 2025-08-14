@@ -1,0 +1,33 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: dealership-web
+  labels:
+    run: dealership-web
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      run: dealership-web
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 25%
+      maxUnavailable: 25%
+  template:
+    metadata:
+      labels:
+        run: dealership-web
+    spec:
+      containers:
+      - name: dealership-web
+        image: us.icr.io/sn-labs-meghanachb/dealership-web:latest
+        imagePullPolicy: Always
+        env:
+        - name: backend_url
+          value: http://dealership:3000
+        - name: sentiment_analyzer_url
+          value: https://sentianalyzer.1yytc01ol5cj.us-south.codeengine.appdomain.cloud/
+        ports:
+        - containerPort: 8000
+          protocol: TCP
