@@ -1,4 +1,5 @@
 name: 'Lint Code'
+
 on:
   push:
     branches: [master, main]
@@ -12,17 +13,24 @@ jobs:
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v3
+
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
-          python-version: '3.12'
+          python-version: '3.11'
+
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
           pip install flake8
-      - name: Run Linter
+
+      - name: Run flake8
         run: |
-          find . -name "*.py" -exec flake8 {} +
+          # Lint only project python, skip migrations & frontend build
+          find ./server -name "*.py" \
+            -not -path "*/migrations/*" \
+            -not -path "*/frontend/*" \
+            -exec flake8 {} +
           echo "Linted all the python files successfully"
 
   lint_js:
@@ -31,13 +39,19 @@ jobs:
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v3
+
       - name: Install Node.js
         uses: actions/setup-node@v3
         with:
-          node-version: '14'
+          node-version: '18'
+
       - name: Install JSHint
         run: npm install jshint --global
-      - name: Run Linter
+
+      - name: Run JSHint
         run: |
-          find ./server/database -name "*.js" -exec jshint {} +
+          # Lint only server-side JS; ignore node_modules if present
+          if [ -d server/database ]; then
+            find ./server/database -name "*.js" -not -path "*/node_modules/*" -exec jshint {} +
+          fi
           echo "Linted all the js files successfully"
