@@ -3,31 +3,40 @@ kind: Deployment
 metadata:
   name: dealership-web
   labels:
-    run: dealership-web
+    app: dealership-web
 spec:
   replicas: 1
   selector:
     matchLabels:
-      run: dealership-web
-  strategy:
-    type: RollingUpdate
-    rollingUpdate:
-      maxSurge: 25%
-      maxUnavailable: 25%
+      app: dealership-web
   template:
     metadata:
       labels:
-        run: dealership-web
+        app: dealership-web
     spec:
+      imagePullSecrets:
+        - name: icr-secret
       containers:
-      - name: dealership-web
-        image: us.icr.io/sn-labs-meghanachb/dealership-web:latest
-        imagePullPolicy: Always
-        env:
-        - name: backend_url
-          value: http://dealership:3000
-        - name: sentiment_analyzer_url
-          value: https://sentianalyzer.1yytc01ol5cj.us-south.codeengine.appdomain.cloud/
-        ports:
-        - containerPort: 8000
-          protocol: TCP
+        - name: dealership-web
+          image: us.icr.io/sn-labs-meghanachb/dealership-web:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 8000
+          env:
+            - name: backend_url
+              value: "http://dealership:3000"
+            - name: sentiment_analyzer_url
+              value: "http://sentiment:5050/"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: dealership-web
+spec:
+  selector:
+    app: dealership-web
+  ports:
+    - port: 8000
+      targetPort: 8000
+      protocol: TCP
+  type: ClusterIP
